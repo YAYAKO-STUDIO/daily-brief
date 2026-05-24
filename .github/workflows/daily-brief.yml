@@ -2,8 +2,8 @@ name: Daily Brief
 
 on:
   schedule:
-    # UTC 04:30 = 台北時間 12:30 每天
-    - cron: '30 4 * * *'
+    # UTC 04:27 = 台北時間 12:27 每天（避開整點/半點高峰，降低 GitHub Actions schedule 延遲）
+    - cron: '27 4 * * *'
   workflow_dispatch:  # 允許手動觸發測試
 
 jobs:
