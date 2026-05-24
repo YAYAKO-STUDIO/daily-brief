@@ -25,7 +25,7 @@ GEMINI_KEY = os.environ["GEMINI_API_KEY"]
 TG_URL = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"gemini-2.5-flash:generateContent?key={GEMINI_KEY}"
+    f"gemini-flash-latest:generateContent?key={GEMINI_KEY}"
 )
 
 # === 時間（台北時區） ===
