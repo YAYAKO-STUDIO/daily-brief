@@ -32,12 +32,13 @@ python daily_brief.py
 
 - `TELEGRAM_BOT_TOKEN` — Telegram Bot token（從 @BotFather 取得）
 - `TELEGRAM_CHAT_ID` — 接收訊息的 chat ID
+- `GEMINI_API_KEY` — Google Gemini API key（從 https://aistudio.google.com/apikey 取得，免費）
 
 ## 手動觸發
 
 在 Actions tab 找到 "Daily Brief" workflow，點 "Run workflow" 即可立即測試。
 
-## 後續升級
+## 架構升級紀錄
 
-純 RSS 版有局限：沒有 LLM 整理、沒有「對你影響」段、沒有篩選優先級。
-未來可加 Anthropic API 或 Google Gemini API 把 RSS 結果交給 LLM 整理，但需另設 `ANTHROPIC_API_KEY` 或 `GEMINI_API_KEY` secret。
+- **v1（純 RSS）**：抓 RSS → 模板化內容，英文標題列表。已淘汰。
+- **v2（當前，Gemini LLM 整理）**：抓 RSS → 整批交 Gemini 2.5 Flash → 繁中摘要 + 「對你影響」段 + 「今日 3 個必看」。免費 tier 完全夠用（每日 1 次呼叫、~12K tokens）。
