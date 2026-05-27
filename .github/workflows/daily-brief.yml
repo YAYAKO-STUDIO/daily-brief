@@ -1,12 +1,10 @@
 name: Daily Brief
 
 on:
-  schedule:
-    # UTC 04:27 = 台北 12:27（GitHub Actions schedule 經常延遲或跳過 — 保留為 backup）
-    - cron: '27 4 * * *'
-  workflow_dispatch:  # 允許手動觸發測試
+  # 主觸發來源：Anthropic Cloud routine 每天台北 12:27 透過 repository_dispatch webhook 觸發
+  # （之前的 schedule 觸發已移除 — GitHub Actions free tier schedule 經常延遲 10+ 小時造成半夜重複推送）
+  workflow_dispatch:  # 手動觸發測試
   repository_dispatch:
-    # 由 cron-job.org 等外部 cron service 觸發（這是 main 觸發來源，準時 < 30 秒延遲）
     types: [daily_brief]
 
 jobs:
