@@ -11,12 +11,21 @@ Yukina 每日簡報 v2 — GitHub Actions cron + Gemini LLM 整理版
 """
 
 import os
+import re
 import sys
 import time
 import json
 import feedparser
 import requests
 from datetime import datetime, timezone, timedelta
+
+
+def _sanitize_error(msg):
+    """把 API key 從錯誤訊息移除以免外洩到 Telegram / log。"""
+    s = str(msg)
+    s = re.sub(r'key=[A-Za-z0-9_\-]+', 'key=***REDACTED***', s)
+    s = re.sub(r'AIzaSy[A-Za-z0-9_\-]{30,}', '***REDACTED***', s)
+    return s
 
 # === 配置（從 GitHub Secrets 讀） ===
 TG_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -218,12 +227,32 @@ Yukina 的背景：
             "temperature": 0.4,
         },
     }
-    r = requests.post(GEMINI_URL, json=payload, timeout=180)
-    r.raise_for_status()
-    data = r.json()
-    text = data["candidates"][0]["content"]["parts"][0]["text"]
-    result = json.loads(text)
-    return result["messages"]
+
+    # Retry on transient errors (5xx, timeout) — Gemini 偶爾 503 Service Unavailable
+    last_err = None
+    for attempt in range(3):
+        try:
+            r = requests.post(GEMINI_URL, json=payload, timeout=180)
+            if r.status_code in (429, 500, 502, 503, 504):
+                last_err = f"HTTP {r.status_code} on attempt {attempt + 1}/3"
+                print(f"Gemini transient error: {last_err}, retrying in 30s...", flush=True)
+                if attempt < 2:
+                    time.sleep(30)
+                    continue
+            r.raise_for_status()
+            data = r.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            return json.loads(text)["messages"]
+        except requests.exceptions.Timeout:
+            last_err = f"Timeout on attempt {attempt + 1}/3"
+            print(f"Gemini {last_err}, retrying in 30s...", flush=True)
+            if attempt < 2:
+                time.sleep(30)
+                continue
+        except requests.exceptions.HTTPError as e:
+            # Non-transient HTTP error (4xx other than 429) — don't retry
+            raise RuntimeError(_sanitize_error(e))
+    raise RuntimeError(f"Gemini failed after 3 attempts. Last error: {last_err}")
 
 
 def main():
@@ -258,8 +287,9 @@ def main():
             raise ValueError(f"Gemini returned {type(messages).__name__} with len={len(messages) if hasattr(messages,'__len__') else 'N/A'}, expected list of 7")
         print(f"Gemini integration OK: 7 messages received", flush=True)
     except Exception as e:
-        print(f"FATAL Gemini failed: {e}", flush=True)
-        send_telegram(f"⚠️ Gemini LLM 整理失敗：{str(e)[:200]}。請看 GitHub Actions log。", silent=False)
+        safe_err = _sanitize_error(e)[:200]
+        print(f"FATAL Gemini failed: {safe_err}", flush=True)
+        send_telegram(f"⚠️ Gemini LLM 整理失敗：{safe_err}。請看 GitHub Actions log。", silent=False)
         sys.exit(1)
 
     # Step 4：推送 7 條
