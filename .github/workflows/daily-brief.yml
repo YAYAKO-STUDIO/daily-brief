@@ -1,11 +1,18 @@
 name: Daily Brief
 
 on:
-  # 主觸發來源：Anthropic Cloud routine 每天台北 12:27 透過 repository_dispatch webhook 觸發
-  # （之前的 schedule 觸發已移除 — GitHub Actions free tier schedule 經常延遲 10+ 小時造成半夜重複推送）
+  # 2026-09-27 恢復 GitHub 自己排程：v3 只靠外部 routine 觸發，routine 6/23 停掉後簡報無聲無息死了 3 個月。
+  # 代價是 free tier 可能延遲數小時；排在台北 07:30，延遲也多半在白天送達。
+  schedule:
+    - cron: '30 23 * * *'   # UTC 23:30 = 台北 07:30
   workflow_dispatch:  # 手動觸發測試
   repository_dispatch:
     types: [daily_brief]
+
+# 防止排程和外部觸發同時跑，發出兩份
+concurrency:
+  group: daily-brief
+  cancel-in-progress: false
 
 jobs:
   brief:
@@ -29,4 +36,5 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DISCORD_WEBHOOK_NEWS: ${{ secrets.DISCORD_WEBHOOK_NEWS }}
         run: python daily_brief.py
